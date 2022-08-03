@@ -1,0 +1,28 @@
+{
+  "name": "betterdiscordplugins",
+  "version": "1.0.0",
+  "description": "Plugins for BetterDiscord.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Piripe/BDPlugins"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "build_plugin": "node ./scripts/build.js local",
+    "build_plugin_remote": "node ./scripts/build.js remote"
+  },
+  "author": "Piripe",
+  "license": "MIT",
+  "eslintIgnore": [
+    "scripts/template.js"
+  ],
+  "buildConfig": {
+    "pluginsFolder": "./src/plugins",
+    "releaseFolder": "./Plugins/{{PLUGIN_NAME}}",
+    "copyToBD": true,
+    "addInstallScript": true,
+    "github": "https://github.com/Piripe/BDPlugins/tree/main/Plugins/{{PLUGIN_NAME}}",
+    "githubRaw": "https://github.com/Piripe/BDPlugins/main/Plugins/{{PLUGIN_NAME}}/{{PLUGIN_NAME}}.plugin.js",
+    "authorLink": "https://github.com/Piripe/"
+  }
+}
