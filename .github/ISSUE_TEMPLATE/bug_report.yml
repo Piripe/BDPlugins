@@ -14,7 +14,7 @@ body:
     description: Which plugin is causing you problems?
     multiple: true
     options:
-      - label: DCController
+      - DCController
   validations:
     required: true
 

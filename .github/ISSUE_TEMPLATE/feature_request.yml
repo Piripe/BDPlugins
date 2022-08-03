@@ -14,7 +14,7 @@ body:
     description: In which plugin do you want to add a feature?
     multiple: true
     options:
-      - label: DCController
+      - DCController
   validations:
     required: true
 
