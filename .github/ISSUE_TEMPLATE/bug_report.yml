@@ -1,0 +1,61 @@
+name: Bug Report
+
+title: Change this title, poorly formatted issues will not be handled
+
+description: Report bugs so we can fix them
+
+labels: bug
+
+body:
+
+- type: dropdown
+  attributes:
+    label: Plugin
+    description: Which plugin is causing you problems?
+    multiple: true
+    options:
+      - label: DCController
+  validations:
+    required: true
+
+- type: input
+  attributes:
+    label: Plugin Version
+    description: |
+      You can find it in the Plugin page in Better Discord.
+    placeholder: vx.x.x
+  validations:
+    required: true
+
+- type: dropdown
+  attributes:
+    label: Install Source
+    description: If installed from a different source, please let us know below
+    options:
+      - Official Better Discord plugins list/Plugin Repo
+      - GitHub
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Expected Behavior vs Actual Behavior
+    placeholder: What did you expect and what actually happened? (Optional)
+
+- type: textarea
+  attributes:
+    label: Steps to reproduce - Ensure to include actual links!
+    placeholder: |
+      1.
+      2.
+      3.
+      ...
+  validations:
+    required: true
+
+
+- type: textarea
+  attributes:
+    label: Other details
+    placeholder: |
+      Note anything else you can provide regarding the issue you're running into.
