@@ -1,6 +1,6 @@
 /**
  * @name DCController
- * @version 0.0.2
+ * @version 0.0.3
  * @authorLink https://github.com/Piripe/
  * @website https://github.com/Piripe/BDPlugins
  * @source https://github.com/Piripe/BDPlugins/raw/main/Plugins/DCController/DCController.plugin.js
@@ -31,7 +31,7 @@
 @else@*/
 
 module.exports = (() => {
-    const config = {info:{name:"DCController",authors:[{name:"Piripe",discord_id:"249746236008169473",github_username:"Piripe",twitter_username:"Piripe__"}],version:"0.0.2",description:"Opens a web API to control your Discord client.",github:"https://github.com/Piripe/BDPlugins",github_raw:"https://github.com/Piripe/BDPlugins/raw/main/Plugins/DCController/DCController.plugin.js"},changelog:[{title:"New Stuff",items:["Web documentation is now available (http://127.0.0.1:6969/docs)","New requests: `/start_video`, `/stop_stream`, `/stop_video`, `/version`"]},{title:"Improvements",type:"improved",items:["Plugin rewritten/updated and renamed to DCController.","A modal is now open to restart Discord when the plugin is stopped."]},{title:"Bug Fixes",type:"fixed",items:["Web server is no longer open when the plugin is loaded."]},{title:"On-going",type:"progress",items:["More requests being added. (Send message, join VC and other things like that)","Settings modal being added."]}],documentation:[{name:"Misc",description:"Miscellaneous requests of the API.",id:"misc",requests:[{request:"/version",method:"GET",description:"Get the version of DCController.",id:"version"},{request:"/docs",method:"GET",description:"Get the document page. (this page)",id:"docs"}]},{name:"UI",description:"Discord interface-related API requests.",id:"ui",requests:[{request:"/settings",method:"GET",description:"Open the settings page.",id:"settings"}]},{name:"Voice",description:"Discord voice chat-related API requests.",id:"voice",requests:[{request:"/deafen",method:"GET",description:"Toggle self-deafen.",id:"deafen"},{request:"/disconnect",method:"GET",description:"Disconnects from the voice channel.",id:"disconnect"},{request:"/mute",method:"GET",description:"Toggle self-mute.",id:"mute"},{request:"/start_video",method:"GET",description:"Start video/camera.",id:"startvideo"},{request:"/stop_stream",method:"GET",description:"Stop current stream.",id:"stopstream"},{request:"/stop_video",method:"GET",description:"Stop video/camera.",id:"stopvideo"},{request:"/stream",method:"GET",description:"Open screen share dialog. (Subject to future changes)",id:"stream"},{request:"/video",method:"GET",description:"Toggle video/camera. (Subject to backend changes)",id:"video"}]}],main:"index.js"};
+    const config = {info:{name:"DCController",authors:[{name:"Piripe",discord_id:"249746236008169473",github_username:"Piripe",twitter_username:"Piripe__"}],version:"0.0.3",description:"Opens a web API to control your Discord client.",github:"https://github.com/Piripe/BDPlugins",github_raw:"https://github.com/Piripe/BDPlugins/raw/main/Plugins/DCController/DCController.plugin.js"},changelog:[{title:"Settings modal is here!",items:["Switch between local or any client address.","Change server port.","Set Authorization header.","Enable/Disable each feature of the API."]}],documentation:[{name:"Misc",description:"Miscellaneous requests of the API.",id:"misc",requests:[{request:"/version",method:"GET",description:"Get the version of DCController.",id:"version"}]},{name:"UI",description:"Discord interface-related API requests.",id:"ui",requests:[{request:"/settings",method:"GET",description:"Open the settings page.",id:"settings"}]},{name:"Voice",description:"Discord voice chat-related API requests.",id:"voice",requests:[{request:"/deafen",method:"GET",description:"Toggle self-deafen.",id:"deafen"},{request:"/disconnect",method:"GET",description:"Disconnects from the voice channel.",id:"disconnect"},{request:"/mute",method:"GET",description:"Toggle self-mute.",id:"mute"},{request:"/start_video",method:"GET",description:"Start video/camera.",id:"startvideo"},{request:"/stream",method:"GET",description:"Open screen share dialog. (Subject to future changes)",id:"stream"},{request:"/stop_stream",method:"GET",description:"Stop current stream.",id:"stopstream"},{request:"/stop_video",method:"GET",description:"Stop video/camera.",id:"stopvideo"},{request:"/video",method:"GET",description:"Toggle video/camera. (Subject to backend changes)",id:"video"}]}],settings:{server:{address:"127.0.0.1",port:"6969"},security:{authorization:""},features:{"/deafen":true,"/disconnect":true,"/mute":true,"/settings":true,"/start_video":true,"/stream":true,"/stop_stream":true,"/stop_video":true,"/video":true}},features_list:["/deafen","/disconnect","/mute","/settings","/start_video","/stream","/stop_stream","/stop_video","/video"],main:"index.js"};
 
     return !global.ZeresPluginLibrary ? class {
         constructor() {this._config = config;}
@@ -59,6 +59,11 @@ module.exports = (() => {
 
     return class DCController extends Plugin {
         onStart() {
+            config.settings = ZLibrary.PluginUtilities.loadData(
+                "DCController",
+                "settings",
+                config.settings
+            );
             this.createServer();
         }
         onStop() {
@@ -75,55 +80,106 @@ module.exports = (() => {
                 }
             );
         }
+        getSettingsPanel() {
+            let new_server_settings = { ...config.settings.server };
+            let settings_panel = ZLibrary.Settings.SettingPanel.build(
+                () => {
+                    ZLibrary.PluginUtilities.saveData("DCController", "settings", config.settings);
+                },
+
+                new ZLibrary.Settings.SettingGroup("Web server").append(
+                    new ZLibrary.Settings.Dropdown(
+                        "Server listen address",
+                        "Defines from which address a client can connect. (default : 127.0.0.1)",
+                        config.settings.server.address,
+                        [
+                            { label: "Local address (127.0.0.1)", value: "127.0.0.1" },
+                            { label: "Any address (0.0.0.0)", value: "0.0.0.0" },
+                        ],
+                        x => {
+                            new_server_settings.address = x;
+                        }
+                    ),
+                    new ZLibrary.Settings.Textbox(
+                        "Server port",
+                        "Defines the port of the server. (default : 6969)",
+                        config.settings.server.port,
+                        x => {
+                            new_server_settings.port = Math.min(
+                                65535,
+                                Math.max(0, x.replace(/\D/g, ""))
+                            );
+                        }
+                    )
+                ),
+                new ZLibrary.Settings.SettingGroup("Security").append(
+                    new ZLibrary.Settings.Textbox(
+                        "Authorization token.",
+                        "(Optional) Set the `authorization` header for requests.",
+                        config.settings.security.authorization,
+                        x => {
+                            config.settings.security.authorization = x;
+                        }
+                    )
+                ),
+                new ZLibrary.Settings.SettingGroup("Features").append(
+                    ...config.features_list.map(
+                        x =>
+                            new ZLibrary.Settings.Switch(x, "", config.settings.features[x], y => {
+                                config.settings.features[x] = y;
+                            })
+                    )
+                )
+            );
+            settings_panel.appendChild(document.createElement("div"));
+            BdApi.ReactDOM.render(
+                BdApi.React.createElement(
+                    "h5",
+                    {
+                        class: "colorStandard-1Xxp1s size14-k_3Hy4 title-3hptVQ defaultMarginh5-3Jxf6f",
+                        style: { marginTop: "16px" },
+                    },
+                    [
+                        "API Documentation : ",
+                        BdApi.React.createElement(
+                            "a",
+                            {
+                                href: "http://127.0.0.1:" + config.settings.server.port + "/docs",
+                                target: "_blank",
+                            },
+                            "http://127.0.0.1:" + config.settings.server.port + "/docs"
+                        ),
+                    ]
+                ),
+                settings_panel.lastChild
+            );
+            ZLibrary.DOMTools.onRemoved(settings_panel, () => {
+                if (
+                    (new_server_settings.address != config.settings.server.address) |
+                    (new_server_settings.port != config.settings.server.port)
+                ) {
+                    config.settings.server = new_server_settings;
+                    ZLibrary.PluginUtilities.saveData("DCController", "settings", config.settings);
+                    ZLibrary.Modals.showConfirmationModal(
+                        "Restart required",
+                        "You need to restart Discord to modify server configuration.",
+                        {
+                            danger: true,
+                            confirmText: "Restart",
+                            cancelText: "I'll restart later",
+                            onConfirm: () => {
+                                location.reload();
+                            },
+                        }
+                    );
+                }
+            });
+            return settings_panel;
+        }
         createServer() {
             const server = http.createServer((req, res) => {
                 let path = req.url.split("/");
-                if (path[1] === "mute") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Muting");
-                    BdApi.findModuleByProps("toggleSelfMute").toggleSelfMute();
-                } else if (path[1] === "deafen") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Deafening");
-                    BdApi.findModuleByProps("toggleSelfMute").toggleSelfDeaf();
-                } else if (path[1] === "stream") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Starting stream");
-
-                    let buttons = document.getElementsByClassName("button-1EGGcP");
-                    if (buttons.length >= 2) {
-                        buttons[1].click();
-                    }
-                } else if (path[1] === "stop_stream") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Stopping stream");
-                    BdApi.findModuleByProps("startStream").stopOwnStream();
-                } else if (path[1] === "video") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Starting/stopping video");
-                    let buttons = document.getElementsByClassName("button-1EGGcP");
-                    if (buttons.length >= 1) {
-                        buttons[0].click();
-                    }
-                } else if (path[1] === "start_video") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Starting video");
-                    BdApi.findModuleByProps("setVideoEnabled").setVideoEnabled(true);
-                } else if (path[1] === "stop_video") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Stopping video");
-                    BdApi.findModuleByProps("setVideoEnabled").setVideoEnabled(false);
-                } else if (path[1] === "disconnect") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Disconnecting");
-                    BdApi.findModuleByProps("selectVoiceChannel").disconnect();
-                } else if (path[1] === "settings") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Opening settings");
-                    ZLibrary.DiscordModules.UserSettingsWindow.open(
-                        ZLibrary.DiscordModules.DiscordConstants.UserSettingsSections.ACCOUNT
-                    );
-                } else if (path[1] === "docs") {
+                if (path[1] === "docs") {
                     res.writeHead(200, { "Content-Type": "text/html" });
                     req.headers.host;
                     res.end(`
@@ -246,6 +302,13 @@ module.exports = (() => {
                                     border-radius: 4px;
                                     padding: 0 8px;
                                 }
+                                .notice {
+                                    background-color: #E224;
+                                    border-bottom: 2px solid #F118;
+                                    padding: 8px 0;
+                                    display: flex;
+                                    justify-content: center;
+                                }
                             </style>
                         </head>
                         <body>
@@ -255,6 +318,11 @@ module.exports = (() => {
                                     <div class="version">v${config.info.version}</div>
                                 </div>
                             </div>
+                            ${
+                                config.settings.security.authorization == ""
+                                    ? ""
+                                    : `<div class="notice">For security reasons, the "Try" buttons are disabled. Clear the authorization token if you want to reactivate it.</div>`
+                            }
                             <div class="content">
                                 ${this.generateDocsContent(req.headers.host)}
                             </div>
@@ -287,13 +355,81 @@ module.exports = (() => {
                     </html>
 
                     `);
-                } else if (path[1] === "version") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Version " + config.info.version);
+                } else if (
+                    (req.headers.authorization === config.settings.security.authorization) |
+                    (config.settings.security.authorization == "")
+                ) {
+                    if ((path[1] === "mute") & config.settings.features["/mute"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Muting");
+                        BdApi.findModuleByProps("toggleSelfMute").toggleSelfMute();
+                    } else if ((path[1] === "deafen") & config.settings.features["/deafen"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Deafening");
+                        BdApi.findModuleByProps("toggleSelfMute").toggleSelfDeaf();
+                    } else if ((path[1] === "stream") & config.settings.features["/stream"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Starting stream");
+
+                        let buttons = document.getElementsByClassName("button-1EGGcP");
+                        if (buttons.length >= 2) {
+                            buttons[1].click();
+                        }
+                    } else if (
+                        (path[1] === "stop_stream") &
+                        config.settings.features["/stop_stream"]
+                    ) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Stopping stream");
+                        BdApi.findModuleByProps("startStream").stopOwnStream();
+                    } else if ((path[1] === "video") & config.settings.features["/video"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Starting/stopping video");
+                        let buttons = document.getElementsByClassName("button-1EGGcP");
+                        if (buttons.length >= 1) {
+                            buttons[0].click();
+                        }
+                    } else if (
+                        (path[1] === "start_video") &
+                        config.settings.features["/start_video"]
+                    ) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Starting video");
+                        BdApi.findModuleByProps("setVideoEnabled").setVideoEnabled(true);
+                    } else if (
+                        (path[1] === "stop_video") &
+                        config.settings.features["/stop_video"]
+                    ) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Stopping video");
+                        BdApi.findModuleByProps("setVideoEnabled").setVideoEnabled(false);
+                    } else if (
+                        (path[1] === "disconnect") &
+                        config.settings.features["/disconnect"]
+                    ) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Disconnecting");
+                        BdApi.findModuleByProps("selectVoiceChannel").disconnect();
+                    } else if ((path[1] === "settings") & config.settings.features["/settings"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Opening settings");
+                        ZLibrary.DiscordModules.UserSettingsWindow.open(
+                            ZLibrary.DiscordModules.DiscordConstants.UserSettingsSections.ACCOUNT
+                        );
+                    } else if (path[1] === "version") {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Version " + config.info.version);
+                    } else {
+                        res.writeHead(404, { "Content-Type": "text/plain" });
+                        res.end("Not Found.");
+                    }
+                } else {
+                    res.writeHead(401, { "Content-Type": "text/plain" });
+                    res.end("Unauthorized.");
                 }
             });
             server.on("error", err => {});
-            server.listen(6969, () => {});
+            server.listen(config.settings.server.port, config.settings.server.address, () => {});
         }
 
         generateDocsContent(host) {
@@ -319,7 +455,9 @@ module.exports = (() => {
                     request.method
                 } ${request.request}</a></h2>
                     <p>${request.description}</p>
-                    <div class="try">
+                    ${
+                        config.settings.security.authorization == ""
+                            ? `<div class="try">
                         <h3>Try it</h3>
                         <input
                             class="try-req"
@@ -327,9 +465,7 @@ module.exports = (() => {
                             type="text"
                             value="curl ${host}${request.request}"
                         />
-                        <button class="send-req" onclick="getRequest(event)" aria-label="${
-                            request.request
-                        }">
+                        <button class="send-req" onclick="getRequest(event)" aria-label="${request.request}">
                             Send
                         </button>
                         <input
@@ -338,7 +474,17 @@ module.exports = (() => {
                             readonly="true"
                             type="text"
                         />
-                    </div>
+                    </div>`
+                            : `<div class="try">
+                    <h3>Exemple</h3>
+                    <input
+                        class="try-req"
+                        readonly="true"
+                        type="text"
+                        value="curl ${host}${request.request}"
+                    />
+                </div>`
+                    }
                 </div>
                 `;
             });

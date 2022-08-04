@@ -9,38 +9,19 @@
                 "twitter_username": "Piripe__"
             }
         ],
-        "version": "0.0.2",
+        "version": "0.0.3",
         "description": "Opens a web API to control your Discord client.",
         "github": "https://github.com/Piripe/BDPlugins",
         "github_raw": "https://github.com/Piripe/BDPlugins/raw/main/Plugins/DCController/DCController.plugin.js"
     },
     "changelog": [
         {
-            "title": "New Stuff",
+            "title": "Settings modal is here!",
             "items": [
-                "Web documentation is now available (http://127.0.0.1:6969/docs)",
-                "New requests: `/start_video`, `/stop_stream`, `/stop_video`, `/version`"
-            ]
-        },
-        {
-            "title": "Improvements",
-            "type": "improved",
-            "items": [
-                "Plugin rewritten/updated and renamed to DCController.",
-                "A modal is now open to restart Discord when the plugin is stopped."
-            ]
-        },
-        {
-            "title": "Bug Fixes",
-            "type": "fixed",
-            "items": ["Web server is no longer open when the plugin is loaded."]
-        },
-        {
-            "title": "On-going",
-            "type": "progress",
-            "items": [
-                "More requests being added. (Send message, join VC and other things like that)",
-                "Settings modal being added."
+                "Switch between local or any client address.",
+                "Change server port.",
+                "Set Authorization header.",
+                "Enable/Disable each feature of the API."
             ]
         }
     ],
@@ -55,12 +36,6 @@
                     "method": "GET",
                     "description": "Get the version of DCController.",
                     "id": "version"
-                },
-                {
-                    "request": "/docs",
-                    "method": "GET",
-                    "description": "Get the document page. (this page)",
-                    "id": "docs"
                 }
             ]
         },
@@ -107,6 +82,12 @@
                     "id": "startvideo"
                 },
                 {
+                    "request": "/stream",
+                    "method": "GET",
+                    "description": "Open screen share dialog. (Subject to future changes)",
+                    "id": "stream"
+                },
+                {
                     "request": "/stop_stream",
                     "method": "GET",
                     "description": "Stop current stream.",
@@ -119,12 +100,6 @@
                     "id": "stopvideo"
                 },
                 {
-                    "request": "/stream",
-                    "method": "GET",
-                    "description": "Open screen share dialog. (Subject to future changes)",
-                    "id": "stream"
-                },
-                {
                     "request": "/video",
                     "method": "GET",
                     "description": "Toggle video/camera. (Subject to backend changes)",
@@ -132,6 +107,35 @@
                 }
             ]
         }
+    ],
+    "settings": {
+        "server": {
+            "address": "127.0.0.1",
+            "port": "6969"
+        },
+        "security": { "authorization": "" },
+        "features": {
+            "/deafen": true,
+            "/disconnect": true,
+            "/mute": true,
+            "/settings": true,
+            "/start_video": true,
+            "/stream": true,
+            "/stop_stream": true,
+            "/stop_video": true,
+            "/video": true
+        }
+    },
+    "features_list": [
+        "/deafen",
+        "/disconnect",
+        "/mute",
+        "/settings",
+        "/start_video",
+        "/stream",
+        "/stop_stream",
+        "/stop_video",
+        "/video"
     ],
     "main": "index.js"
 }

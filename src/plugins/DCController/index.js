@@ -5,6 +5,11 @@ module.exports = (Plugin, Api) => {
 
     return class DCController extends Plugin {
         onStart() {
+            config.settings = ZLibrary.PluginUtilities.loadData(
+                "DCController",
+                "settings",
+                config.settings
+            );
             this.createServer();
         }
         onStop() {
@@ -21,55 +26,106 @@ module.exports = (Plugin, Api) => {
                 }
             );
         }
+        getSettingsPanel() {
+            let new_server_settings = { ...config.settings.server };
+            let settings_panel = ZLibrary.Settings.SettingPanel.build(
+                () => {
+                    ZLibrary.PluginUtilities.saveData("DCController", "settings", config.settings);
+                },
+
+                new ZLibrary.Settings.SettingGroup("Web server").append(
+                    new ZLibrary.Settings.Dropdown(
+                        "Server listen address",
+                        "Defines from which address a client can connect. (default : 127.0.0.1)",
+                        config.settings.server.address,
+                        [
+                            { label: "Local address (127.0.0.1)", value: "127.0.0.1" },
+                            { label: "Any address (0.0.0.0)", value: "0.0.0.0" },
+                        ],
+                        x => {
+                            new_server_settings.address = x;
+                        }
+                    ),
+                    new ZLibrary.Settings.Textbox(
+                        "Server port",
+                        "Defines the port of the server. (default : 6969)",
+                        config.settings.server.port,
+                        x => {
+                            new_server_settings.port = Math.min(
+                                65535,
+                                Math.max(0, x.replace(/\D/g, ""))
+                            );
+                        }
+                    )
+                ),
+                new ZLibrary.Settings.SettingGroup("Security").append(
+                    new ZLibrary.Settings.Textbox(
+                        "Authorization token.",
+                        "(Optional) Set the `authorization` header for requests.",
+                        config.settings.security.authorization,
+                        x => {
+                            config.settings.security.authorization = x;
+                        }
+                    )
+                ),
+                new ZLibrary.Settings.SettingGroup("Features").append(
+                    ...config.features_list.map(
+                        x =>
+                            new ZLibrary.Settings.Switch(x, "", config.settings.features[x], y => {
+                                config.settings.features[x] = y;
+                            })
+                    )
+                )
+            );
+            settings_panel.appendChild(document.createElement("div"));
+            BdApi.ReactDOM.render(
+                BdApi.React.createElement(
+                    "h5",
+                    {
+                        class: "colorStandard-1Xxp1s size14-k_3Hy4 title-3hptVQ defaultMarginh5-3Jxf6f",
+                        style: { marginTop: "16px" },
+                    },
+                    [
+                        "API Documentation : ",
+                        BdApi.React.createElement(
+                            "a",
+                            {
+                                href: "http://127.0.0.1:" + config.settings.server.port + "/docs",
+                                target: "_blank",
+                            },
+                            "http://127.0.0.1:" + config.settings.server.port + "/docs"
+                        ),
+                    ]
+                ),
+                settings_panel.lastChild
+            );
+            ZLibrary.DOMTools.onRemoved(settings_panel, () => {
+                if (
+                    (new_server_settings.address != config.settings.server.address) |
+                    (new_server_settings.port != config.settings.server.port)
+                ) {
+                    config.settings.server = new_server_settings;
+                    ZLibrary.PluginUtilities.saveData("DCController", "settings", config.settings);
+                    ZLibrary.Modals.showConfirmationModal(
+                        "Restart required",
+                        "You need to restart Discord to modify server configuration.",
+                        {
+                            danger: true,
+                            confirmText: "Restart",
+                            cancelText: "I'll restart later",
+                            onConfirm: () => {
+                                location.reload();
+                            },
+                        }
+                    );
+                }
+            });
+            return settings_panel;
+        }
         createServer() {
             const server = http.createServer((req, res) => {
                 let path = req.url.split("/");
-                if (path[1] === "mute") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Muting");
-                    BdApi.findModuleByProps("toggleSelfMute").toggleSelfMute();
-                } else if (path[1] === "deafen") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Deafening");
-                    BdApi.findModuleByProps("toggleSelfMute").toggleSelfDeaf();
-                } else if (path[1] === "stream") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Starting stream");
-
-                    let buttons = document.getElementsByClassName("button-1EGGcP");
-                    if (buttons.length >= 2) {
-                        buttons[1].click();
-                    }
-                } else if (path[1] === "stop_stream") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Stopping stream");
-                    BdApi.findModuleByProps("startStream").stopOwnStream();
-                } else if (path[1] === "video") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Starting/stopping video");
-                    let buttons = document.getElementsByClassName("button-1EGGcP");
-                    if (buttons.length >= 1) {
-                        buttons[0].click();
-                    }
-                } else if (path[1] === "start_video") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Starting video");
-                    BdApi.findModuleByProps("setVideoEnabled").setVideoEnabled(true);
-                } else if (path[1] === "stop_video") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Stopping video");
-                    BdApi.findModuleByProps("setVideoEnabled").setVideoEnabled(false);
-                } else if (path[1] === "disconnect") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Disconnecting");
-                    BdApi.findModuleByProps("selectVoiceChannel").disconnect();
-                } else if (path[1] === "settings") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Opening settings");
-                    ZLibrary.DiscordModules.UserSettingsWindow.open(
-                        ZLibrary.DiscordModules.DiscordConstants.UserSettingsSections.ACCOUNT
-                    );
-                } else if (path[1] === "docs") {
+                if (path[1] === "docs") {
                     res.writeHead(200, { "Content-Type": "text/html" });
                     req.headers.host;
                     res.end(`
@@ -192,6 +248,13 @@ module.exports = (Plugin, Api) => {
                                     border-radius: 4px;
                                     padding: 0 8px;
                                 }
+                                .notice {
+                                    background-color: #E224;
+                                    border-bottom: 2px solid #F118;
+                                    padding: 8px 0;
+                                    display: flex;
+                                    justify-content: center;
+                                }
                             </style>
                         </head>
                         <body>
@@ -201,6 +264,11 @@ module.exports = (Plugin, Api) => {
                                     <div class="version">v${config.info.version}</div>
                                 </div>
                             </div>
+                            ${
+                                config.settings.security.authorization == ""
+                                    ? ""
+                                    : `<div class="notice">For security reasons, the "Try" buttons are disabled. Clear the authorization token if you want to reactivate it.</div>`
+                            }
                             <div class="content">
                                 ${this.generateDocsContent(req.headers.host)}
                             </div>
@@ -233,13 +301,81 @@ module.exports = (Plugin, Api) => {
                     </html>
 
                     `);
-                } else if (path[1] === "version") {
-                    res.writeHead(200, { "Content-Type": "text/plain" });
-                    res.end("Version " + config.info.version);
+                } else if (
+                    (req.headers.authorization === config.settings.security.authorization) |
+                    (config.settings.security.authorization == "")
+                ) {
+                    if ((path[1] === "mute") & config.settings.features["/mute"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Muting");
+                        BdApi.findModuleByProps("toggleSelfMute").toggleSelfMute();
+                    } else if ((path[1] === "deafen") & config.settings.features["/deafen"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Deafening");
+                        BdApi.findModuleByProps("toggleSelfMute").toggleSelfDeaf();
+                    } else if ((path[1] === "stream") & config.settings.features["/stream"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Starting stream");
+
+                        let buttons = document.getElementsByClassName("button-1EGGcP");
+                        if (buttons.length >= 2) {
+                            buttons[1].click();
+                        }
+                    } else if (
+                        (path[1] === "stop_stream") &
+                        config.settings.features["/stop_stream"]
+                    ) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Stopping stream");
+                        BdApi.findModuleByProps("startStream").stopOwnStream();
+                    } else if ((path[1] === "video") & config.settings.features["/video"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Starting/stopping video");
+                        let buttons = document.getElementsByClassName("button-1EGGcP");
+                        if (buttons.length >= 1) {
+                            buttons[0].click();
+                        }
+                    } else if (
+                        (path[1] === "start_video") &
+                        config.settings.features["/start_video"]
+                    ) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Starting video");
+                        BdApi.findModuleByProps("setVideoEnabled").setVideoEnabled(true);
+                    } else if (
+                        (path[1] === "stop_video") &
+                        config.settings.features["/stop_video"]
+                    ) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Stopping video");
+                        BdApi.findModuleByProps("setVideoEnabled").setVideoEnabled(false);
+                    } else if (
+                        (path[1] === "disconnect") &
+                        config.settings.features["/disconnect"]
+                    ) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Disconnecting");
+                        BdApi.findModuleByProps("selectVoiceChannel").disconnect();
+                    } else if ((path[1] === "settings") & config.settings.features["/settings"]) {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Opening settings");
+                        ZLibrary.DiscordModules.UserSettingsWindow.open(
+                            ZLibrary.DiscordModules.DiscordConstants.UserSettingsSections.ACCOUNT
+                        );
+                    } else if (path[1] === "version") {
+                        res.writeHead(200, { "Content-Type": "text/plain" });
+                        res.end("Version " + config.info.version);
+                    } else {
+                        res.writeHead(404, { "Content-Type": "text/plain" });
+                        res.end("Not Found.");
+                    }
+                } else {
+                    res.writeHead(401, { "Content-Type": "text/plain" });
+                    res.end("Unauthorized.");
                 }
             });
             server.on("error", err => {});
-            server.listen(6969, () => {});
+            server.listen(config.settings.server.port, config.settings.server.address, () => {});
         }
 
         generateDocsContent(host) {
@@ -265,7 +401,9 @@ module.exports = (Plugin, Api) => {
                     request.method
                 } ${request.request}</a></h2>
                     <p>${request.description}</p>
-                    <div class="try">
+                    ${
+                        config.settings.security.authorization == ""
+                            ? `<div class="try">
                         <h3>Try it</h3>
                         <input
                             class="try-req"
@@ -273,9 +411,7 @@ module.exports = (Plugin, Api) => {
                             type="text"
                             value="curl ${host}${request.request}"
                         />
-                        <button class="send-req" onclick="getRequest(event)" aria-label="${
-                            request.request
-                        }">
+                        <button class="send-req" onclick="getRequest(event)" aria-label="${request.request}">
                             Send
                         </button>
                         <input
@@ -284,7 +420,17 @@ module.exports = (Plugin, Api) => {
                             readonly="true"
                             type="text"
                         />
-                    </div>
+                    </div>`
+                            : `<div class="try">
+                    <h3>Exemple</h3>
+                    <input
+                        class="try-req"
+                        readonly="true"
+                        type="text"
+                        value="curl ${host}${request.request}"
+                    />
+                </div>`
+                    }
                 </div>
                 `;
             });
